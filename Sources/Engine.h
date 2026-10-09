@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#import "Localization.h"
 NS_ASSUME_NONNULL_BEGIN
 @interface LanguageEngine : NSObject
 @property(nonatomic) NSInteger shortcut;
@@ -19,6 +20,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic,readonly) NSString *currentSourceID;
 - (void)start;
 - (void)recheck;
+- (void)refreshLocalization;
 - (void)requestPermission;
 - (void)requestSystemSwitchPermission;
 - (void)selectSource:(NSString *)identifier;

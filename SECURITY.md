@@ -1,4 +1,6 @@
-# Security and verification — 2.7.1
+# Security and verification — 2.8
+
+[English](SECURITY.md) · [Русский](SECURITY.ru.md)
 
 This is a public preview. Review and regression testing reduce risk but do not certify the application as free from defects.
 
@@ -20,6 +22,8 @@ This is a public preview. Review and regression testing reduce risk but do not c
 - Native shortcut parsing: custom assignments, ordering, disabled/malformed entries, modifier and Power key rejection.
 - 15 modifier combinations: complete generated event lifecycle and preservation of Caps Lock, without posting input during tests.
 - Access policy tests: each mode requires only its own permission.
+- English/Russian interface resources, immediate language changes, translated menu/status/diagnostics, and persistence of the selected language.
+- Bilingual license terms are included in the application resources.
 - Code signature and installer payload verification. The PKG installs only the app into /Applications, without installer scripts, and cannot relocate to an older copy elsewhere. SHA-256 checksums are published alongside the installer.
 
 ## Limits

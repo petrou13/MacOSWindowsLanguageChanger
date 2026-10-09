@@ -49,7 +49,7 @@ final class MenuAppearance: ObservableObject {
     var emojiLabel: String { String(emoji.prefix(1)).isEmpty ? "⌨️" : String(emoji.prefix(1)) }
     func chooseImage() {
         let panel = NSOpenPanel()
-        panel.title = "Выберите значок для строки меню"
+        panel.title = L("Выберите значок для строки меню")
         panel.allowedContentTypes = [.image]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -58,7 +58,7 @@ final class MenuAppearance: ObservableObject {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         do {
             let values = try url.resourceValues(forKeys: [.fileSizeKey])
-            guard (values.fileSize ?? 0) <= 10_000_000 else { error = "Выберите изображение размером до 10 МБ."; return }
+            guard (values.fileSize ?? 0) <= 10_000_000 else { error = L("Выберите изображение размером до 10 МБ."); return }
             guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary),
                   let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any],
                   let width = properties[kCGImagePropertyPixelWidth] as? NSNumber,
@@ -73,7 +73,7 @@ final class MenuAppearance: ObservableObject {
                     kCGImageSourceShouldCacheImmediately: true
                   ] as CFDictionary),
                   let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 36, pixelsHigh: 36, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
-                  let context = NSGraphicsContext(bitmapImageRep: bitmap) else { error = "Не удалось прочитать изображение. Выберите PNG или JPEG до 8192 пикселей и 32 мегапикселей."; return }
+                  let context = NSGraphicsContext(bitmapImageRep: bitmap) else { error = L("Не удалось прочитать изображение. Выберите PNG или JPEG до 8192 пикселей и 32 мегапикселей."); return }
             let source = NSImage(cgImage: thumbnail, size: NSSize(width: thumbnail.width, height: thumbnail.height))
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = context
@@ -83,12 +83,12 @@ final class MenuAppearance: ObservableObject {
             let size = NSSize(width: source.size.width * ratio, height: source.size.height * ratio)
             source.draw(in: NSRect(x: (36-size.width)/2, y: (36-size.height)/2, width: size.width, height: size.height), from: .zero, operation: .sourceOver, fraction: 1)
             NSGraphicsContext.restoreGraphicsState()
-            guard let data = bitmap.representation(using: .png, properties: [:]) else { error = "Не удалось сохранить значок."; return }
+            guard let data = bitmap.representation(using: .png, properties: [:]) else { error = L("Не удалось сохранить значок."); return }
             imageData = data
             imageName = url.lastPathComponent
             iconKind = 2
             error = ""
-        } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
+        } catch { self.error = LF("Не удалось открыть файл: %@", error.localizedDescription) }
     }
     func reset() {
         showLanguage = true; iconKind = 0; symbol = "keyboard"; emoji = "⌨️"
@@ -98,21 +98,21 @@ final class MenuAppearance: ObservableObject {
 
 struct MenuAppearanceView: View {
     @ObservedObject var appearance: MenuAppearance
-    private let symbols = [("keyboard", "Клавиатура"), ("globe", "Глобус"), ("character.bubble", "Язык"), ("command", "Command"), ("arrow.triangle.2.circlepath", "Переключение")]
+    private let symbols = [("keyboard", L("Клавиатура")), ("globe", L("Глобус")), ("character.bubble", L("Язык")), ("command", "Command"), ("arrow.triangle.2.circlepath", L("Переключение"))]
     var body: some View {
         VStack(spacing: 0) {
-            PageIntro(symbol: "menubar.rectangle", title: "Отображение в строке меню", subtitle: "Раскладка, значок и предпросмотр. Изменения применяются сразу.")
+            PageIntro(symbol: "menubar.rectangle", title: L("Отображение в строке меню"), subtitle: L("Раскладка, значок и предпросмотр. Изменения применяются сразу."))
             Form {
                 Section {
-                    Toggle("Показывать текущую раскладку", isOn: $appearance.showLanguage)
-                    Text("Если выключено, остаётся только выбранный значок. Доступ к меню приложения сохраняется.")
+                    Toggle(L("Показывать текущую раскладку"), isOn: $appearance.showLanguage)
+                    Text(L("Если выключено, остаётся только выбранный значок. Доступ к меню приложения сохраняется."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                } header: { Text("Раскладка в строке меню") }
+                } header: { Text(L("Раскладка в строке меню")) }
                 Section {
-                    Picker("Тип значка", selection: $appearance.iconKind) {
-                        Text("Системный символ").tag(0)
-                        Text("Эмодзи").tag(1)
-                        Text("Изображение из файла").tag(2)
+                    Picker(L("Тип значка"), selection: $appearance.iconKind) {
+                        Text(L("Системный символ")).tag(0)
+                        Text(L("Эмодзи")).tag(1)
+                        Text(L("Изображение из файла")).tag(2)
                     }
                     if appearance.iconKind == 0 {
                         HStack {
@@ -122,33 +122,33 @@ struct MenuAppearanceView: View {
                                 }.help(title).accessibilityLabel(title)
                             }
                         }
-                        TextField("Имя любого SF Symbol", text: $appearance.symbol).textFieldStyle(.roundedBorder)
+                        TextField(L("Имя любого SF Symbol"), text: $appearance.symbol).textFieldStyle(.roundedBorder)
                         if NSImage(systemSymbolName: appearance.symbol, accessibilityDescription: nil) == nil {
-                            Text("Такой символ не найден. Пока отображается клавиатура.").font(.caption).foregroundStyle(.orange)
+                            Text(L("Такой символ не найден. Пока отображается клавиатура.")).font(.caption).foregroundStyle(.orange)
                         }
                     } else if appearance.iconKind == 1 {
-                        TextField("Эмодзи", text: $appearance.emoji).textFieldStyle(.roundedBorder)
-                        Text("Откройте выбор эмодзи через Control + Command + пробел. Используется первый символ.")
+                        TextField(L("Эмодзи"), text: $appearance.emoji).textFieldStyle(.roundedBorder)
+                        Text(L("Откройте выбор эмодзи через Control + Command + пробел. Используется первый символ."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else {
-                        Button("Выбрать изображение…") { appearance.chooseImage() }
+                        Button(L("Выбрать изображение…")) { appearance.chooseImage() }
                         if !appearance.imageName.isEmpty { Text(appearance.imageName).font(.caption).foregroundStyle(.secondary) }
-                        Toggle("Адаптировать цвет к светлой и тёмной теме", isOn: $appearance.templateImage)
-                        Text("Для одноцветных значков включите адаптацию. Для цветных изображений оставьте её выключенной. Файл копируется в настройки; оригинал больше не нужен.")
+                        Toggle(L("Адаптировать цвет к светлой и тёмной теме"), isOn: $appearance.templateImage)
+                        Text(L("Для одноцветных значков включите адаптацию. Для цветных изображений оставьте её выключенной. Файл копируется в настройки; оригинал больше не нужен."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     if !appearance.error.isEmpty { Text(appearance.error).foregroundStyle(.red) }
-                } header: { Text("Значок") }
+                } header: { Text(L("Значок")) }
                 Section {
                     HStack {
-                        Text("Предпросмотр")
+                        Text(L("Предпросмотр"))
                         Spacer()
                         if let image = appearance.image { Image(nsImage: image).resizable().scaledToFit().frame(width: 18, height: 18) }
                         else { Text(appearance.emojiLabel) }
                         if appearance.showLanguage { Text("EN").font(.body.monospaced()) }
                     }.padding(.vertical, 4)
-                    Button("Вернуть стандартный вид") { appearance.reset() }
-                } header: { Text("Как это выглядит") }
+                    Button(L("Вернуть стандартный вид")) { appearance.reset() }
+                } header: { Text(L("Как это выглядит")) }
             }.formStyle(.grouped)
         }
     }

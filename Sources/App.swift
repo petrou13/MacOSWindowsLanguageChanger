@@ -10,6 +10,14 @@ final class AppModel: ObservableObject {
     @Published var loginMessage = ""
     @Published var sample = ""
     @Published var tab: SettingsTab = .switching
+    @Published var interfaceLanguage = WSInterfaceLanguage() {
+        didSet {
+            guard interfaceLanguage == "ru" || interfaceLanguage == "en" else { return }
+            UserDefaults.standard.set(interfaceLanguage, forKey: "interfaceLanguage")
+            appearance.error = ""
+            engine.refreshLocalization()
+        }
+    }
     @Published var diagnosticsShown = false {
         didSet { engine.diagnosticVisible = diagnosticsShown }
     }
@@ -26,7 +34,7 @@ final class AppModel: ObservableObject {
         engine.recheck()
         loginEnabled = SMAppService.mainApp.status == .enabled
     }
-    var accessModeName: String { engine.accessMode == 1 ? "Универсальный доступ" : "Мониторинг ввода" }
+    var accessModeName: String { engine.accessMode == 1 ? L("Универсальный доступ") : L("Мониторинг ввода") }
     func setAccessMode(_ mode: Int) {
         engine.accessMode = mode
         recheck()
@@ -44,11 +52,11 @@ final class AppModel: ObservableObject {
         loginEnabled = SMAppService.mainApp.status == .enabled
     }
     var status: String {
-        if !engine.enabled { return "Переключение на паузе" }
-        if engine.remote { return "RDP: клавиши без изменений" }
-        if !engine.permitted { return "Разрешите \(accessModeName.lowercased())" }
-        if !engine.listening { return "Мониторинг недоступен — проверьте разрешение" }
-        return "Готово к переключению"
+        if !engine.enabled { return L("Переключение на паузе") }
+        if engine.remote { return L("RDP: клавиши без изменений") }
+        if !engine.permitted { return LF("Разрешите %@", accessModeName) }
+        if !engine.listening { return L("Мониторинг недоступен — проверьте разрешение") }
+        return L("Готово к переключению")
     }
     var shortcutName: String { ["Shift + Command", "Option + Shift", "Control + Shift"][engine.shortcut] }
     func keyboardSettings() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension")!) }
@@ -66,8 +74,8 @@ struct PageIntro: View {
                 .frame(width: 44, height: 44).background(Color.accentColor.opacity(0.09), in: RoundedRectangle(cornerRadius: 11))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.title2.weight(.semibold))
-                Text(subtitle).font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Text(L(title)).font(.title2.weight(.semibold))
+                Text(L(subtitle)).font(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }.padding(.horizontal, 24).padding(.top, 22).padding(.bottom, 6)
@@ -78,16 +86,16 @@ struct SettingsView: View {
     @ObservedObject var model: AppModel
     var body: some View {
         TabView(selection: $model.tab) {
-            switching.tabItem { Label("Переключение", systemImage: "keyboard") }.tag(SettingsTab.switching)
-            MenuAppearanceView(appearance: model.appearance).tabItem { Label("Строка меню", systemImage: "menubar.rectangle") }.tag(SettingsTab.appearance)
+            switching.tabItem { Label(L("Переключение"), systemImage: "keyboard") }.tag(SettingsTab.switching)
+            MenuAppearanceView(appearance: model.appearance).tabItem { Label(L("Строка меню"), systemImage: "menubar.rectangle") }.tag(SettingsTab.appearance)
             remote.tabItem { Label("RDP", systemImage: "desktopcomputer") }.tag(SettingsTab.remote)
-            system.tabItem { Label("Основные", systemImage: "gearshape") }.tag(SettingsTab.system)
-            about.tabItem { Label("О приложении", systemImage: "info.circle") }.tag(SettingsTab.about)
+            system.tabItem { Label(L("Основные"), systemImage: "gearshape") }.tag(SettingsTab.system)
+            about.tabItem { Label(L("О приложении"), systemImage: "info.circle") }.tag(SettingsTab.about)
         }.padding(12).frame(width: 660, height: 600)
     }
     private var switching: some View {
         VStack(spacing: 0) {
-            PageIntro(symbol: "keyboard", title: "Привычное переключение языка", subtitle: "На Mac — как в Windows. Без переназначения клавиш.")
+            PageIntro(symbol: "keyboard", title: L("Привычное переключение языка"), subtitle: L("На Mac — как в Windows. Без переназначения клавиш."))
             Form {
                 Section {
                     HStack {
@@ -95,40 +103,40 @@ struct SettingsView: View {
                         Spacer()
                         Text(model.engine.languageCode).font(.headline.monospaced()).foregroundStyle(.secondary)
                     }
-                    Toggle("Включить переключение", isOn: Binding(get: { model.engine.enabled }, set: { model.engine.enabled = $0 }))
-                    Picker("Сочетание", selection: Binding(get: { model.engine.shortcut }, set: { model.engine.shortcut = $0 })) {
+                    Toggle(L("Включить переключение"), isOn: Binding(get: { model.engine.enabled }, set: { model.engine.enabled = $0 }))
+                    Picker(L("Сочетание"), selection: Binding(get: { model.engine.shortcut }, set: { model.engine.shortcut = $0 })) {
                         Text("⇧ Shift + ⌘ Command").tag(0)
                         Text("⌥ Option + ⇧ Shift").tag(1)
                         Text("⌃ Control + ⇧ Shift").tag(2)
                     }
-                } header: { Text("Клавиши") } footer: {
-                    Text("Зажмите одну клавишу, затем вторую — в любом порядке. После отпускания обеих язык сменится. Ограничения по времени нет.")
+                } header: { Text(L("Клавиши")) } footer: {
+                    Text(L("Зажмите одну клавишу, затем вторую — в любом порядке. После отпускания обеих язык сменится. Ограничения по времени нет."))
                 }
                 switchingMode
                 Section {
-                    LabeledContent("Текущая раскладка", value: model.engine.languageName)
-                    TextField("Нажмите сочетание и напечатайте несколько букв", text: $model.sample)
-                        .textFieldStyle(.roundedBorder).accessibilityLabel("Проверка раскладки")
+                    LabeledContent(L("Текущая раскладка"), value: model.engine.languageName)
+                    TextField(L("Нажмите сочетание и напечатайте несколько букв"), text: $model.sample)
+                        .textFieldStyle(.roundedBorder).accessibilityLabel(L("Проверка раскладки"))
                     HStack {
-                        Button("Переключить сейчас") { model.engine.switchLanguage() }
+                        Button(L("Переключить сейчас")) { model.engine.switchLanguage() }
                         Spacer()
-                        Button("Обновить") { model.recheck() }
+                        Button(L("Обновить")) { model.recheck() }
                     }
                     if !model.engine.message.isEmpty { Text(model.engine.message).foregroundStyle(.red) }
                     Button { model.diagnosticsShown.toggle() } label: {
                         HStack {
                             Image(systemName: model.diagnosticsShown ? "chevron.down" : "chevron.right")
                                 .font(.caption.weight(.semibold)).frame(width: 14)
-                            Text("Диагностика сочетания")
+                            Text(L("Диагностика сочетания"))
                             Spacer()
                         }.frame(maxWidth: .infinity, minHeight: 28, alignment: .leading).contentShape(Rectangle())
                     }.buttonStyle(.plain)
-                        .accessibilityValue(model.diagnosticsShown ? "Развёрнуто" : "Свёрнуто")
+                        .accessibilityValue(model.diagnosticsShown ? L("Развёрнуто") : L("Свёрнуто"))
                     if model.diagnosticsShown {
                         Text(model.engine.diagnostic).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
-                } header: { Text("Проверка и диагностика") } footer: {
-                    Text("Сочетание с буквой, например Command + Shift + F, остаётся обычной горячей клавишей и не меняет язык.")
+                } header: { Text(L("Проверка и диагностика")) } footer: {
+                    Text(L("Сочетание с буквой, например Command + Shift + F, остаётся обычной горячей клавишей и не меняет язык."))
                 }
             }.formStyle(.grouped)
         }
@@ -136,75 +144,83 @@ struct SettingsView: View {
     @ViewBuilder
     private var switchingMode: some View {
         Section {
-            Picker("Режим доступа", selection: Binding(get: { model.engine.accessMode }, set: { model.setAccessMode($0) })) {
-                Text("Мониторинг ввода — базовый функционал").tag(0)
-                Text("Универсальный доступ — системное сочетание").tag(1)
+            Picker(L("Режим доступа"), selection: Binding(get: { model.engine.accessMode }, set: { model.setAccessMode($0) })) {
+                Text(L("Мониторинг ввода — базовый функционал")).tag(0)
+                Text(L("Универсальный доступ — системное сочетание")).tag(1)
             }
-            Text(model.engine.accessMode == 0 ? "Прямая смена раскладки. Требуется только «Мониторинг ввода»." : "Смена языка через штатное сочетание macOS. Требуется только «Универсальный доступ».")
+            Text(model.engine.accessMode == 0 ? L("Прямая смена раскладки. Требуется только «Мониторинг ввода».") : L("Смена языка через штатное сочетание macOS. Требуется только «Универсальный доступ»."))
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
-                Label(model.engine.permitted ? "Доступ предоставлен" : "Нет доступа: \(model.accessModeName)", systemImage: model.engine.permitted ? "checkmark.shield" : "exclamationmark.triangle")
+                Label(model.engine.permitted ? L("Доступ предоставлен") : LF("Нет доступа: %@", model.accessModeName), systemImage: model.engine.permitted ? "checkmark.shield" : "exclamationmark.triangle")
                     .foregroundStyle(model.engine.permitted ? Color.secondary : Color.orange)
                 Spacer()
-                Button("Открыть настройки доступа…") { model.openSelectedAccess() }
+                Button(L("Открыть настройки доступа…")) { model.openSelectedAccess() }
             }
             if !model.engine.permitted {
-                Text("Включите приложение в соответствующем списке macOS. Если его нет, добавьте кнопкой «+».")
+                Text(L("Включите приложение в соответствующем списке macOS. Если его нет, добавьте кнопкой «+»."))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-        } header: { Text("Способ переключения и доступ") }
+        } header: { Text(L("Способ переключения и доступ")) }
         Section {
-            Label("Значок возле текстового курсора", systemImage: "character.cursor.ibeam")
+            Label(L("Значок возле текстового курсора"), systemImage: "character.cursor.ibeam")
             Text(model.engine.systemSwitchStatus)
                 .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if model.engine.accessMode == 1 {
-                Button("Настроить системное сочетание…") { model.keyboardSettings() }
+                Button(L("Настроить системное сочетание…")) { model.keyboardSettings() }
             }
-        } header: { Text("Индикация смены языка") } footer: {
-            Text("Встроенный значок рисует macOS. Отображение раскладки и значок приложения в строке меню настраиваются в разделе «Строка меню».")
+        } header: { Text(L("Индикация смены языка")) } footer: {
+            Text(L("Встроенный значок рисует macOS. Отображение раскладки и значок приложения в строке меню настраиваются в разделе «Строка меню»."))
         }
     }
     private var remote: some View {
         VStack(spacing: 0) {
-            PageIntro(symbol: "desktopcomputer", title: "Горячие клавиши рабочего сервера", subtitle: "Поведение при активном окне Windows App или Microsoft Remote Desktop.")
+            PageIntro(symbol: "desktopcomputer", title: L("Горячие клавиши рабочего сервера"), subtitle: L("Поведение при активном окне Windows App или Microsoft Remote Desktop."))
             Form {
                 Section {
-                    Toggle("Отключать переключатель в RDP", isOn: Binding(get: { model.engine.excludeRDP }, set: { model.engine.excludeRDP = $0 }))
-                    Text(model.engine.excludeRDP ? "В активном Windows App мониторинг и переключение выключены. После перехода в другое приложение переключатель снова работает." : "Переключатель работает и при активном Windows App. Он меняет раскладку на Mac; реакция удалённого сервера зависит от настроек клиента RDP.")
+                    Toggle(L("Отключать переключатель в RDP"), isOn: Binding(get: { model.engine.excludeRDP }, set: { model.engine.excludeRDP = $0 }))
+                    Text(model.engine.excludeRDP ? L("В активном Windows App мониторинг и переключение выключены. После перехода в другое приложение переключатель снова работает.") : L("Переключатель работает и при активном Windows App. Он меняет раскладку на Mac; реакция удалённого сервера зависит от настроек клиента RDP."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                } header: { Text("Поведение в RDP") }
+                } header: { Text(L("Поведение в RDP")) }
                 Section {
-                    LabeledContent("Command и Option", value: "Без переназначения")
-                    LabeledContent("Option + Shift + F", value: "Без изменений")
-                    Text("Конечное действие сочетания определяется настройками Windows App и приложения на сервере.")
+                    LabeledContent(L("Command и Option"), value: L("Без переназначения"))
+                    LabeledContent("Option + Shift + F", value: L("Без изменений"))
+                    Text(L("Конечное действие сочетания определяется настройками Windows App и приложения на сервере."))
                         .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                } header: { Text("Сохранение сочетаний") }
+                } header: { Text(L("Сохранение сочетаний")) }
                 Section {
-                    Text("Если вы пользовались другой утилитой, отключите её и отмените сделанные ею переназначения модификаторов.")
+                    Text(L("Если вы пользовались другой утилитой, отключите её и отмените сделанные ею переназначения модификаторов."))
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Открыть настройки клавиатуры…") { model.keyboardSettings() }
-                } header: { Text("После других утилит") }
+                    Button(L("Открыть настройки клавиатуры…")) { model.keyboardSettings() }
+                } header: { Text(L("После других утилит")) }
             }.formStyle(.grouped)
         }
     }
     private var system: some View {
         VStack(spacing: 0) {
-            PageIntro(symbol: "gearshape", title: "Поведение приложения", subtitle: "Автозапуск и приватность.")
+            PageIntro(symbol: "gearshape", title: L("Поведение приложения"), subtitle: L("Автозапуск, язык интерфейса и приватность."))
             Form {
                 Section {
-                    Toggle("Запускать при входе в macOS", isOn: Binding(get: { model.loginEnabled }, set: { model.setLogin($0) }))
-                    if !model.loginMessage.isEmpty { Text(model.loginMessage).foregroundStyle(.red) }
-                } header: { Text("Автозапуск") } footer: {
-                    Text("Храните приложение в постоянном месте, например в папке «Программы».")
+                    Picker(L("Язык интерфейса"), selection: $model.interfaceLanguage) {
+                        Text("Русский").tag("ru")
+                        Text("English").tag("en")
+                    }
+                } header: { Text(L("Язык интерфейса")) } footer: {
+                    Text(L("Изменение применяется сразу и не меняет раскладку клавиатуры."))
                 }
                 Section {
-                    Label("Введённый текст не сохраняется", systemImage: "lock")
-                    Label("Сетевые запросы не выполняются", systemImage: "network.slash")
-                    DisclosureGroup("Как уменьшается нагрузка") {
-                        Text("Один наблюдатель событий без постоянного опроса. Он распознаёт модификаторы и факт добавления другой клавиши, не сохраняя текст. После смены языка выполняется короткая серия обновлений индикатора. На паузе и в RDP при включённом исключении мониторинг выключен.")
+                    Toggle(L("Запускать при входе в macOS"), isOn: Binding(get: { model.loginEnabled }, set: { model.setLogin($0) }))
+                    if !model.loginMessage.isEmpty { Text(model.loginMessage).foregroundStyle(.red) }
+                } header: { Text(L("Автозапуск")) } footer: {
+                    Text(L("Храните приложение в постоянном месте, например в папке «Программы»."))
+                }
+                Section {
+                    Label(L("Введённый текст не сохраняется"), systemImage: "lock")
+                    Label(L("Сетевые запросы не выполняются"), systemImage: "network.slash")
+                    DisclosureGroup(L("Как уменьшается нагрузка")) {
+                        Text(L("Один наблюдатель событий без постоянного опроса. Он распознаёт модификаторы и факт добавления другой клавиши, не сохраняя текст. После смены языка выполняется короткая серия обновлений индикатора. На паузе и в RDP при включённом исключении мониторинг выключен."))
                             .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.vertical, 6)
                     }
-                } header: { Text("Приватность") }
+                } header: { Text(L("Приватность")) }
             }.formStyle(.grouped)
         }
     }
@@ -214,16 +230,25 @@ struct SettingsView: View {
                 Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage()).resizable().frame(width: 76, height: 76).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 5) {
                     Text("MacOSWindowsLanguageChanger").font(.title2.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.75)
-                    Text("Windows-style language switching for macOS").foregroundStyle(.secondary)
-                    Text("Версия 2.7.1 · macOS 13 и новее").font(.caption).foregroundStyle(.secondary)
+                    Text(L("Переключение языка как в Windows для macOS")).foregroundStyle(.secondary)
+                    Text(L("Версия 2.8 · macOS 13 и новее")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
             }.padding(24)
             Form {
                 Section {
-                    Text("Переключение языка на Mac через Shift + Command, Option + Shift или Control + Shift. Исключение для Windows App настраивается на вкладке RDP.")
+                    Text(L("Переключение языка на Mac через Shift + Command, Option + Shift или Control + Shift. Исключение для Windows App настраивается на вкладке RDP."))
                         .fixedSize(horizontal: false, vertical: true)
-                } header: { Text("Для чего приложение") }
+                } header: { Text(L("Для чего приложение")) }
+                Section {
+                    Text(L("Личное и рабочее использование разрешено. Продажа и платное распространение приложения запрещены."))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(L("Открыть условия лицензии…")) {
+                        if let url = Bundle.main.url(forResource: "LICENSE", withExtension: "txt") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                } header: { Text(L("Лицензия")) }
             }.formStyle(.grouped)
         }
     }
@@ -259,8 +284,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.isReleasedWhenClosed = false
         window.center()
         refreshMenu()
-        if !UserDefaults.standard.bool(forKey: "openedV271") {
-            UserDefaults.standard.set(true, forKey: "openedV271")
+        if !UserDefaults.standard.bool(forKey: "openedV28") {
+            UserDefaults.standard.set(true, forKey: "openedV28")
             showSettings(nil)
         }
     }
@@ -277,8 +302,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
         menu.addItem(withTitle: model.status, action: nil, keyEquivalent: "")
         menu.addItem(.separator())
-        let settings = menu.addItem(withTitle: "Настройки…", action: #selector(showSettings(_:)), keyEquivalent: ","); settings.target = self
-        let pause = menu.addItem(withTitle: model.engine.enabled ? "Пауза" : "Продолжить", action: #selector(togglePause(_:)), keyEquivalent: ""); pause.target = self
+        let settings = menu.addItem(withTitle: L("Настройки…"), action: #selector(showSettings(_:)), keyEquivalent: ","); settings.target = self
+        let pause = menu.addItem(withTitle: model.engine.enabled ? L("Пауза") : L("Продолжить"), action: #selector(togglePause(_:)), keyEquivalent: ""); pause.target = self
         if !model.engine.remote {
             let sources = NSMenu()
             for source in model.engine.inputSources {
@@ -287,11 +312,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 row.target = self; row.representedObject = id
                 row.state = id == model.engine.currentSourceID ? .on : .off
             }
-            let parent = menu.addItem(withTitle: "Раскладка", action: nil, keyEquivalent: "")
+            let parent = menu.addItem(withTitle: L("Раскладка"), action: nil, keyEquivalent: "")
             parent.submenu = sources
         }
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Завершить «MacOSWindowsLanguageChanger»", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: L("Завершить «MacOSWindowsLanguageChanger»"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
     }
     @objc func showSettings(_ sender: Any?) { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil); model.recheck() }

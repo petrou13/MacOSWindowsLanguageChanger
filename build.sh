@@ -14,13 +14,19 @@ scratch="${PWD}/.build"
 "$scratch/chord-tests"
 "$toolchain/clang" -isysroot "$sdk" -fobjc-arc -Wall -Wextra -Werror Tests/native_shortcut_test.m -framework Foundation -framework ApplicationServices -o "$scratch/native-shortcut-tests"
 "$scratch/native-shortcut-tests"
+testApp="$scratch/LocalizationTests.app"
+mkdir -p "$testApp/Contents/MacOS" "$testApp/Contents/Resources"
+cp -R Resources/en.lproj Resources/ru.lproj "$testApp/Contents/Resources/"
+"$toolchain/clang" -isysroot "$sdk" -fobjc-arc -Wall -Wextra -Werror Tests/localization_test.m Sources/Localization.m -framework Foundation -o "$testApp/Contents/MacOS/LocalizationTests"
+"$testApp/Contents/MacOS/LocalizationTests"
 "$toolchain/swiftc" -module-cache-path "$scratch/ModuleCache" -sdk "$sdk" Tools/Icon.swift -o "$scratch/icon-maker"
 "$scratch/icon-maker" "$scratch/AppIcon.iconset"
 app='dist/MacOSWindowsLanguageChanger.app'
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 for arch in arm64 x86_64; do
   "$toolchain/clang" -isysroot "$sdk" -arch "$arch" -mmacosx-version-min=13.0 -fobjc-arc -Wall -Wextra -Wno-unused-parameter -Werror -c Sources/Engine.m -o "$scratch/Engine-$arch.o"
-  "$toolchain/swiftc" -module-cache-path "$scratch/ModuleCache" -sdk "$sdk" -target "$arch-apple-macosx13.0" -import-objc-header Sources/Engine.h Sources/App.swift Sources/MenuAppearance.swift "$scratch/Engine-$arch.o" -framework Cocoa -framework Carbon -framework ApplicationServices -framework ServiceManagement -o "$scratch/KeyboardLanguage-$arch"
+  "$toolchain/clang" -isysroot "$sdk" -arch "$arch" -mmacosx-version-min=13.0 -fobjc-arc -Wall -Wextra -Werror -c Sources/Localization.m -o "$scratch/Localization-$arch.o"
+  "$toolchain/swiftc" -module-cache-path "$scratch/ModuleCache" -sdk "$sdk" -target "$arch-apple-macosx13.0" -import-objc-header Sources/Engine.h Sources/App.swift Sources/MenuAppearance.swift Sources/Localization.swift "$scratch/Engine-$arch.o" "$scratch/Localization-$arch.o" -framework Cocoa -framework Carbon -framework ApplicationServices -framework ServiceManagement -o "$scratch/KeyboardLanguage-$arch"
 done
 "$toolchain/lipo" -create "$scratch/KeyboardLanguage-arm64" "$scratch/KeyboardLanguage-x86_64" -output "$app/Contents/MacOS/KeyboardLanguage"
 cp "$scratch/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
@@ -37,19 +43,24 @@ cat > "$app/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>MacOSWindowsLanguageChanger</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>2.7.1</string>
-<key>CFBundleVersion</key><string>10</string>
+<key>CFBundleShortVersionString</key><string>2.8</string>
+<key>CFBundleVersion</key><string>11</string>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleLocalizations</key><array><string>en</string><string>ru</string></array>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>
 <key>NSInputMonitoringUsageDescription</key><string>Распознавание модификаторов для переключения языка. Текст не сохраняется.</string>
 </dict></plist>
 PLIST
+cp -R Resources/en.lproj Resources/ru.lproj "$app/Contents/Resources/"
+cp LICENSE "$app/Contents/Resources/LICENSE.txt"
+/usr/bin/plutil -lint Resources/en.lproj/*.strings Resources/ru.lproj/*.strings
 signingIdentity="${APP_SIGNING_IDENTITY:--}"
 timestampOption=--timestamp
 [[ "$signingIdentity" == - ]] && timestampOption=--timestamp=none
 /usr/bin/codesign --force --sign "$signingIdentity" --options runtime "$timestampOption" --identifier local.maloypictures.WinSwitch "$app"
 /usr/bin/codesign --verify --strict "$app"
 /usr/bin/plutil -lint "$app/Contents/Info.plist"
-/usr/bin/ditto --norsrc -c -k --keepParent "$app" dist/MacOSWindowsLanguageChanger-2.7.1-macOS-universal.zip
+/usr/bin/ditto --norsrc -c -k --keepParent "$app" dist/MacOSWindowsLanguageChanger-2.8-macOS-universal.zip
 print "Built: ${PWD}/$app"

@@ -67,10 +67,10 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
     return WSNativeShortcut(all);
 }
 - (NSString *)systemSwitchStatus {
-    if(_accessMode==0) return @"Базовый режим: прямая смена раскладки. Системный значок возле курсора может отставать.";
-    if(!self.systemSwitchPermitted) return @"Для синхронизации значка возле курсора разрешите «Универсальный доступ».";
-    if(![self systemShortcut]) return @"Включите системное сочетание выбора источника ввода в настройках клавиатуры.";
-    return @"Системное переключение: раскладку и значок возле курсора обновляет macOS.";
+    if(_accessMode==0) return WSLocalized(@"Базовый режим: прямая смена раскладки. Системный значок возле курсора может отставать.");
+    if(!self.systemSwitchPermitted) return WSLocalized(@"Для синхронизации значка возле курсора разрешите «Универсальный доступ».");
+    if(![self systemShortcut]) return WSLocalized(@"Включите системное сочетание выбора источника ввода в настройках клавиатуры.");
+    return WSLocalized(@"Системное переключение: раскладку и значок возле курсора обновляет macOS.");
 }
 - (BOOL)postSystemSwitch {
     NSRunningApplication *front=NSWorkspace.sharedWorkspace.frontmostApplication;
@@ -112,12 +112,12 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
         });
     }
 }
-- (NSString *)languageName { return _languageName; }
+- (NSString *)languageName { return WSLocalized(_languageName); }
 - (NSString *)languageCode { return _languageCode; }
 - (NSString *)currentSourceID { return _currentSourceID; }
-- (NSString *)message { return _message; }
+- (NSString *)message { return WSLocalized(_message); }
 - (NSString *)diagnostic {
-    return [NSString stringWithFormat:@"События модификаторов: %lu · Распознано сочетаний: %lu · Смен раскладки: %lu\n%@",(unsigned long)_modifierEvents,(unsigned long)_gestures,(unsigned long)_changes,_lastEvent];
+    return [NSString stringWithFormat:WSLocalized(@"События модификаторов: %lu · Распознано сочетаний: %lu · Смен раскладки: %lu\n%@"),(unsigned long)_modifierEvents,(unsigned long)_gestures,(unsigned long)_changes,WSLocalized(_lastEvent)];
 }
 - (void)setDiagnosticVisible:(BOOL)value { _diagnosticVisible=value; [self notify]; }
 - (void)notify { [NSNotificationCenter.defaultCenter postNotificationName:@"LanguageEngineChanged" object:self]; }
@@ -172,7 +172,7 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
     [self loadSources];
     if([identifier isEqualToString:_currentSourceID]) return;
     if(_accessMode==1) {
-        if(!self.permitted || !self.systemSwitchPermitted || ![self systemShortcut]) { _message=self.systemSwitchStatus; [self notify]; return; }
+        if(!self.permitted || !self.systemSwitchPermitted || ![self systemShortcut]) { _message=@"Проверьте выбранный режим доступа и системное сочетание в настройках."; [self notify]; return; }
         BOOL exists=NO;
         for(NSDictionary *item in self.inputSources) if([item[@"id"] isEqualToString:identifier]) exists=YES;
         if(!exists) return;
@@ -187,7 +187,7 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
         if([candidate isEqualToString:identifier]) {
             OSStatus result=TISSelectInputSource(source);
             [self scheduleSourceRefresh];
-            _message=result==noErr ? @"" : [NSString stringWithFormat:@"macOS не разрешила изменить раскладку (код %d).",(int)result];
+            _message=result==noErr ? @"" : [NSString stringWithFormat:WSLocalized(@"macOS не разрешила изменить раскладку (код %d)."),(int)result];
             // Never predict the selected language; use TIS state after the native change.
             NSString *expected=[identifier copy];
             dispatch_async(dispatch_get_main_queue(),^{
@@ -210,7 +210,7 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
     [self loadSources];
     if(_sources.count<2) { _message=@"Добавьте ещё одну раскладку в настройках клавиатуры."; [self notify]; return; }
     if(_accessMode==1) {
-        if(!self.permitted || !self.systemSwitchPermitted || ![self systemShortcut]) { _message=self.systemSwitchStatus; [self notify]; return; }
+        if(!self.permitted || !self.systemSwitchPermitted || ![self systemShortcut]) { _message=@"Проверьте выбранный режим доступа и системное сочетание в настройках."; [self notify]; return; }
         _nativeTarget=nil;
         if(![self postSystemSwitch]) { _message=@"Отпустите модификаторы и повторите переключение."; [self notify]; }
         return;
@@ -285,6 +285,7 @@ static BOOL IsRemoteApplication(NSRunningApplication *app) {
     [self frontChanged];
 }
 - (void)recheck { [self frontChanged]; }
+- (void)refreshLocalization { _message=@""; [self notify]; }
 - (void)requestPermission {
     [NSWorkspace.sharedWorkspace openURL:[NSURL URLWithString:@"x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"]];
 }
