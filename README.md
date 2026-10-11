@@ -8,12 +8,19 @@ Switch your Mac's keyboard language like in Windows — with **Shift + Command**
 
 ## Install
 
-1. Download the **PKG** from Releases, open it and follow the standard macOS installer. It installs the app into Applications. Alternatively, unzip the ZIP and move the app into Applications yourself.
+| Option | Download | Installation |
+| --- | --- | --- |
+| App in ZIP | **[Download .app in ZIP](https://github.com/petrou13/MacOSWindowsLanguageChanger/releases/download/v2.8/MacOSWindowsLanguageChanger-2.8-macOS-universal.zip)** | Extract the archive and move MacOSWindowsLanguageChanger.app to Applications. |
+| PKG installer | **[Download installer](https://github.com/petrou13/MacOSWindowsLanguageChanger/releases/download/v2.8/MacOSWindowsLanguageChanger-2.8-macOS-universal.pkg)** | Open the PKG and follow the macOS installer. |
+
+Choose one option: both contain the same app. The “Source code” archives are for development, not installation.
+
+1. Install the app using either option above.
 2. Launch MacOSWindowsLanguageChanger from Applications. Open Settings from its keyboard icon in the menu bar.
 3. In **Switching**, select one access mode and click **Open permission settings…**. Enable the app in the matching macOS privacy list. Both permissions are not required together.
 4. Return to the app. If macOS requires a restart after granting access, quit and reopen the app.
 
-The app is locally signed (ad hoc); the PKG is unsigned. This preview is **not Developer ID signed or notarized by Apple**. macOS may block first opening. Follow [Apple's instructions](https://support.apple.com/102445); do not disable Gatekeeper.
+The app is locally signed (ad hoc); the PKG is unsigned. This preview is **not Developer ID signed or notarized by Apple**. macOS may block first opening. This applies to both the app in ZIP and the PKG: the download format does not replace signing and notarization. Follow [Apple's instructions](https://support.apple.com/102445); do not disable Gatekeeper.
 
 ## Features
 
